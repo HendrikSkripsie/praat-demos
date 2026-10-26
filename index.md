@@ -3,30 +3,6 @@ title: ZeroSyl Output Examples in Praat
 ---
 
 <style>
-  .tabs {
-    display: flex;
-    gap: 0.5em;
-    border-bottom: 2px solid #ddd;
-    margin: 1.5em 0 2em 0;
-  }
-  .tab {
-    font: inherit;
-    font-size: 1em;
-    padding: 0.6em 1.2em;
-    border: 1px solid #ddd;
-    border-bottom: none;
-    border-radius: 6px 6px 0 0;
-    background: #f5f5f5;
-    color: #333;
-    cursor: pointer;
-    margin-bottom: -2px;
-  }
-  .tab[aria-selected="true"] {
-    background: #fff;
-    border-bottom: 2px solid #fff;
-    font-weight: bold;
-  }
-  .view[hidden] { display: none; }
   .video-wrap {
     position: relative;
     width: 100%;
@@ -47,14 +23,6 @@ title: ZeroSyl Output Examples in Praat
     color: #555;
     margin-bottom: 2.5em;
   }
-  .tag {
-    display: inline-block;
-    font-size: 0.85em;
-    background: #eef3f8;
-    border-radius: 4px;
-    padding: 0.1em 0.5em;
-    margin-left: 0.3em;
-  }
 </style>
 
 # ZeroSyl Output Examples in Praat
@@ -67,15 +35,9 @@ This page accompanies my report *Your Report Title*. Each video shows ZeroSyl's
 syllable segmentation next to the ground-truth (GT) TextGrid in
 [Praat](https://www.fon.hum.uva.nl/praat/), for utterance ID 82. The video titles
 give the interval between the two boundaries being examined (for example,
-"post 48to49"). Video numbers are the same in both tabs.
+"post 48to49").
 
-<div class="tabs" role="tablist">
-  <button class="tab" role="tab" data-tab="type" aria-selected="true">By error type</button>
-  <button class="tab" role="tab" data-tab="alpha" aria-selected="false">All videos (A–Z)</button>
-</div>
-
-<div id="view-type" class="view" role="tabpanel"></div>
-<div id="view-alpha" class="view" role="tabpanel" hidden></div>
+<div id="videos"></div>
 
 <script>
   // ---- Edit this list to add or change videos ----
@@ -117,58 +79,26 @@ give the interval between the two boundaries being examined (for example,
   const UTTERANCE_ID = "82";
   // ---- End of list ----
 
-  const all = [];
   let n = 0;
+  let html = '<p><strong>Contents</strong></p><ol>' +
+    sections.map(s => '<li><a href="#' + s.id + '">' + s.title + '</a></li>').join('') + '</ol>';
+
   sections.forEach((s, i) => {
-    s.number = i + 1;
+    html += '<h2 id="' + s.id + '">' + (i + 1) + '. ' + s.title + '</h2>';
     s.videos.forEach(v => {
-      v.n = ++n;
-      v.name = "ID " + UTTERANCE_ID + ", post " + v.post;
-      v.section = s;
-      all.push(v);
+      n++;
+      const name = "ID " + UTTERANCE_ID + ", post " + v.post;
+      html += '<div id="video-' + n + '" class="video-wrap">' +
+        '<iframe loading="lazy" src="https://www.youtube-nocookie.com/embed/' + v.yt + '" ' +
+        'title="' + name + '" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>' +
+        '</div><p class="caption">Video ' + n + ' (' + name + '): ' + v.caption + '</p>';
     });
   });
+  document.getElementById("videos").innerHTML = html;
 
-  function videoHTML(v, anchorPrefix, showTag) {
-    const tag = showTag ? '<br><span class="tag">' + v.section.title + '</span>' : '';
-    return '<div id="' + anchorPrefix + v.n + '" class="video-wrap">' +
-      '<iframe loading="lazy" src="https://www.youtube-nocookie.com/embed/' + v.yt + '" ' +
-      'title="' + v.name + '" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>' +
-      '</div><p class="caption">Video ' + v.n + ' (' + v.name + '): ' + v.caption + tag + '</p>';
-  }
-
-  // Tab 1: by error type
-  let typeHTML = '<p><strong>Contents</strong></p><ol>' +
-    sections.map(s => '<li><a href="#' + s.id + '">' + s.title + '</a></li>').join('') + '</ol>';
-  sections.forEach(s => {
-    typeHTML += '<h2 id="' + s.id + '">' + s.number + '. ' + s.title + '</h2>';
-    s.videos.forEach(v => { typeHTML += videoHTML(v, "video-", false); });
-  });
-  document.getElementById("view-type").innerHTML = typeHTML;
-
-  // Tab 2: all videos sorted by title (natural order, so "post 2to3" comes before "post 18to20")
-  const sorted = all.slice().sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
-  document.getElementById("view-alpha").innerHTML = sorted.map(v => videoHTML(v, "az-video-", true)).join('');
-
-  // Tab switching
-  const tabs = document.querySelectorAll(".tab");
-  function showTab(name) {
-    tabs.forEach(t => t.setAttribute("aria-selected", t.dataset.tab === name ? "true" : "false"));
-    document.getElementById("view-type").hidden = name !== "type";
-    document.getElementById("view-alpha").hidden = name !== "alpha";
-  }
-  tabs.forEach(t => t.addEventListener("click", () => {
-    showTab(t.dataset.tab);
-    history.replaceState(null, "", t.dataset.tab === "alpha" ? "#all-videos" : "#by-type");
-  }));
-
-  // Open the right tab from the URL, e.g. .../#all-videos or .../#gt-errors or .../#video-5
+  // Jump to a section or video from the URL, e.g. .../#gt-errors or .../#video-5
   function openFromHash() {
-    const h = location.hash.slice(1);
-    if (h === "all-videos" || h.startsWith("az-video-")) showTab("alpha");
-    else showTab("type");
-    const el = h && document.getElementById(h);
+    const el = location.hash && document.getElementById(location.hash.slice(1));
     if (el) el.scrollIntoView();
   }
   window.addEventListener("hashchange", openFromHash);
